@@ -19,7 +19,7 @@ st.title("🎬 어제의 박스오피스")
 # ==========================================
 # 서버 시계 타임존에 상관없이 한국 시간(UTC+9)으로 정확하게 계산합니다.
 kst_timezone = datetime.timezone(datetime.timedelta(hours=9))
-now_kst = datetime.datetime.now(timezone=kst_timezone)
+now_kst = datetime.datetime.now(tz=kst_timezone)  # tz 매개변수로 타임존 지정
 yesterday_kst = now_kst - datetime.timedelta(days=1)
 
 # API 요청용 날짜 형식 (YYYYMMDD)
