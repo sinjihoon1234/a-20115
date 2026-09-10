@@ -41,11 +41,12 @@ selected_movie = st.sidebar.selectbox("분석할 영화를 선택해 주세요:"
 filtered_df = df[df['영화명'] == selected_movie]
 
 # [5. 레이아웃 구역 나누기]
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📊 개별 영화 일별 관객수", 
     "📈 개별 영화 누적 관객수", 
     "🏆 Top 5 영화 누적 관객수 비교",
-    "📉 전체 시장 관객수 추이 (7일 이동평균)"
+    "📉 전체 시장 관객수 추이 (7일 이동평균)",
+    "🗓️ 월별 전체 관객수 합계"
 ])
 
 # 첫 번째 탭: 개별 영화 일별 관객수
@@ -114,16 +115,11 @@ with tab3:
 with tab4:
     st.subheader("📉 전체 박스오피스 관객수 추이 및 7일 이동평균")
     
-    # 1. 기준일자별 전체 TOP 10 영화 관객수 합계 산출
     daily_total = df.groupby('기준일자')['해당일관객수'].sum().reset_index()
-    
-    # 2. 7일 이동평균(Rolling Mean) 계산
     daily_total['7일이동평균'] = daily_total['해당일관객수'].rolling(window=7).mean()
     
-    # 3. Plotly Graph Objects로 그래프 생성
     fig4 = go.Figure()
     
-    # 원본 일별 총 관객수 (연한 회색, 얇은 선)
     fig4.add_trace(go.Scatter(
         x=daily_total['기준일자'],
         y=daily_total['해당일관객수'],
@@ -132,7 +128,6 @@ with tab4:
         line=dict(color='lightgray', width=1.5)
     ))
     
-    # 7일 이동평균선 (진한 파란색, 두꺼운 선)
     fig4.add_trace(go.Scatter(
         x=daily_total['기준일자'],
         y=daily_total['7일이동평균'],
@@ -141,7 +136,6 @@ with tab4:
         line=dict(color='#1f77b4', width=3)
     ))
     
-    # 그래프 레이아웃 설정
     fig4.update_layout(
         title="전체 영화 기준일자별 관객수 합계 및 7일 이동평균 추이",
         xaxis_title="날짜",
@@ -151,3 +145,29 @@ with tab4:
     
     st.plotly_chart(fig4, use_container_width=True)
     st.info("💡 **이 그래프로 알 수 있는 것:** 주말과 평일 간의 극심한 일별 관객수 변동(노이즈)을 평탄화하여, 전체 극장가 박스오피스 시장의 성수기/비수기 등 장기적인 관객 유입 흐름을 명확하게 파악할 수 있습니다.")
+
+# 다섯 번째 탭: 월별 전체 관객수 합계 (막대 그래프)
+with tab5:
+    st.subheader("🗓️ 월별 전체 박스오피스 관객수 합계")
+    
+    # 1. 일별 전체 관객수 합계 데이터 계산
+    daily_total_data = df.groupby('기준일자')['해당일관객수'].sum().reset_index()
+    
+    # 2. '기준일자'에서 '연-월(YYYY-MM)' 형태로 문자열 생성
+    daily_total_data['연월'] = daily_total_data['기준일자'].dt.strftime('%Y-%m')
+    
+    # 3. 월 단위로 묶어 관객수 합계 산출
+    monthly_total = daily_total_data.groupby('연월')['해당일관객수'].sum().reset_index()
+    
+    # 4. Plotly 막대그래프(px.bar) 작성
+    fig5 = px.bar(
+        monthly_total,
+        x='연월',
+        y='해당일관객수',
+        title="월별 박스오피스 전체 관객수 총합",
+        labels={'연월': '월(년-월)', '해당일관객수': '총 관객수(명)'},
+        text_auto='.2s'  # 막대 상단에 간략화된 수치 표시
+    )
+    
+    st.plotly_chart(fig5, use_container_width=True)
+    st.info("💡 **이 그래프로 알 수 있는 것:** 월별 총 관객수 비교를 통해 연중 극장가의 최대 성수기(방학/연휴 시즌)와 비수기 달이 언제인지 직관적으로 파악할 수 있습니다.")
