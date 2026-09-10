@@ -47,7 +47,7 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "🏆 Top 5 영화 누적 관객수 비교",
     "📉 전체 시장 관객수 추이 (7일 이동평균)",
     "🗓️ 월별 전체 관객수 합계",
-    "🗓️ 월×요일별 캘린더 히트맵"
+    "📅 캘린더 히트맵 (주차별×요일별)"
 ])
 
 # 첫 번째 탭: 개별 영화 일별 관객수
@@ -167,39 +167,43 @@ with tab5:
     st.plotly_chart(fig5, use_container_width=True)
     st.info("💡 **이 그래프로 알 수 있는 것:** 월별 총 관객수 비교를 통해 연중 극장가의 최대 성수기(방학/연휴 시즌)와 비수기 달이 언제인지 직관적으로 파악할 수 있습니다.")
 
-# 여섯 번째 탭: 월×요일별 캘린더 히트맵
+# 여섯 번째 탭: 주차별×요일별 캘린더 히트맵 (1일 1타일 빽빽한 구성)
 with tab6:
-    st.subheader("🗓️ 월×요일별 극장가 관객 합계 히트맵")
+    st.subheader("📅 주차별×요일별 캘린더 히트맵")
     
-    # 1. 일별 전체 관객수 및 날짜 전처리
+    # 1. 일별 전체 관객수 집계
     daily_market = df.groupby('기준일자')['해당일관객수'].sum().reset_index()
-    daily_market['연월'] = daily_market['기준일자'].dt.strftime('%Y-%m')
-    daily_market['날짜str'] = daily_market['기준일자'].dt.strftime('%Y-%m-%d')
     
-    # 2. 요일 이름 및 순서 정의 (월요일 ~ 일요일)
+    # 2. 날짜 속성 추출 (요일, 날짜 문자열)
     day_map = {0: '월', 1: '화', 2: '수', 3: '목', 4: '금', 5: '토', 6: '일'}
     daily_market['요일'] = daily_market['기준일자'].dt.dayofweek.map(day_map)
     day_order = ['월', '화', '수', '목', '금', '토', '일']
     
-    # 3. 관객수 합계 피벗 테이블 및 요일 순서 재정렬
+    # 마우스 올려놓았을 때 보여줄 YYYY-MM-DD 포맷
+    daily_market['날짜str'] = daily_market['기준일자'].dt.strftime('%Y-%m-%d')
+    
+    # 주차(Week) 식별자 생성 (주 시작일인 월요일 기준으로 연-월 주차 표시)
+    week_start = daily_market['기준일자'] - pd.to_timedelta(daily_market['기준일자'].dt.dayofweek, unit='D')
+    daily_market['주차_레이블'] = week_start.dt.strftime('%Y-%m (%W주차)')
+    
+    # 3. 주차×요일 2차원 피벗 테이블 생성 (X축: 주차 52개, Y축: 요일 7개 = 364개 타일)
     pivot_audience = daily_market.pivot_table(
         index='요일',
-        columns='연월',
+        columns='주차_레이블',
         values='해당일관객수',
-        aggfunc='sum',
+        aggfunc='first',
         observed=False
     ).reindex(day_order)
     
-    # 4. 호버 툴팁용 YYYY-MM-DD 날짜 피벗 테이블
     pivot_dates = daily_market.pivot_table(
         index='요일',
-        columns='연월',
+        columns='주차_레이블',
         values='날짜str',
-        aggfunc=lambda x: '<br>'.join(x),
+        aggfunc='first',
         observed=False
     ).reindex(day_order)
     
-    # 5. Plotly 히트맵 작성
+    # 4. Plotly 캘린더 히트맵 구현
     fig6 = go.Figure(
         data=go.Heatmap(
             z=pivot_audience.values,
@@ -207,17 +211,17 @@ with tab6:
             y=pivot_audience.index,
             text=pivot_dates.values,
             colorscale='YlGnBu',  # 관객수가 많을수록 진한 색상
-            hovertemplate='<b>월/요일:</b> %{x} (%{y}요일)<br><b>월합계 관객수:</b> %{z:,.0f}명<br><b>포함된 날짜:</b><br>%{text}<extra></extra>'
+            hovertemplate='<b>날짜:</b> %{text}<br><b>총 관객수:</b> %{z:,.0f}명<extra></extra>'
         )
     )
     
     fig6.update_layout(
-        title="월별×요일별 박스오피스 총 관객수 분포",
-        xaxis_title="월 (YYYY-MM)",
+        title="일별 관객수 캘린더 히트맵 (주차별 × 요일별)",
+        xaxis_title="주차 (연-월 주차)",
         yaxis_title="요일",
-        yaxis=dict(autorange='reversed'),  # 월요일을 맨 위에 배치
+        yaxis=dict(autorange='reversed'),  # 월요일을 가장 위에 배치
         template='plotly_white'
     )
     
     st.plotly_chart(fig6, use_container_width=True)
-    st.info("💡 **이 그래프로 알 수 있는 것:** 각 월별로 어떤 요일(주말/평일)에 관객 집중도가 가장 높았는지 색상의 농도를 통해 한눈에 비교 및 분석할 수 있습니다.")
+    st.info("💡 **이 그래프로 알 수 있는 것:** 1년 365일의 관객수를 1일 단위 캘린더 타일로 펼쳐봄으로써, 명절·연휴·주말 등 관객수가 폭발하는 개별 일자(YYYY-MM-DD)를 정밀하게 포착할 수 있습니다.")
