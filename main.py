@@ -92,7 +92,7 @@ st.info("💡 **이 그래프로 알 수 있는 것:** 각 장르가 전체 관�
 st.divider()
 
 # ==========================================
-# 그래프 3: 총 관객 수 히스토그램 (신규 추가)
+# 그래프 3: 총 관객 수 히스토그램
 # ==========================================
 st.subheader("3. 총 관객 수 분포 (히스토그램)")
 
@@ -115,12 +115,10 @@ fig3.update_layout(
 
 st.plotly_chart(fig3, use_container_width=True)
 
-# 가장 관객 수가 많은 영화 추출
 max_movie = df.loc[df['total_audi'].idxmax()]
 max_movie_name = max_movie['movieNm']
 max_movie_audi = max_movie['total_audi']
 
-# 대부분의 영화가 몰려있는 구간 계산 (중위수 및 하위 75% 기준)
 q25 = df['total_audi'].quantile(0.25)
 q75 = df['total_audi'].quantile(0.75)
 
@@ -132,7 +130,7 @@ st.info(
 st.divider()
 
 # ==========================================
-# 그래프 4: 개봉일 스크린수 vs 총 관객수 (관계 분석)
+# 그래프 4: 개봉일 스크린수 vs 총 관객수 (산점도)
 # ==========================================
 st.subheader("4. 개봉일 스크린 수와 총 관객 수의 관계")
 
@@ -141,8 +139,7 @@ fig4 = px.scatter(
     x='first_scrn',
     y='total_audi',
     color='genre_clean',
-    hover_name='movieNm',
-    hover_data={'first_scrn': ':,', 'total_audi': ':,', 'days_in_top10': True},
+    hover_name='movieNm',  # 마우스 올렸을 때 제목에 영화명 표시
     labels={
         'first_scrn': '개봉일 스크린 수 (개)',
         'total_audi': '총 관객 수 (명)',
@@ -150,17 +147,25 @@ fig4 = px.scatter(
     }
 )
 
-fig4.update_traces(marker=dict(size=10, opacity=0.7))
-fig4.update_layout(margin=dict(t=30, b=30, l=10, r=10))
+# 점 크기 및 툴팁 서식 지정 (영화명, 개봉일 스크린수, 총 관객수)
+fig4.update_traces(
+    marker=dict(size=9, opacity=0.8),
+    hovertemplate='<b>%{hovertext}</b><br>개봉일 스크린 수: %{x:,.0f}개<br>총 관객 수: %{y:,.0f}명<extra></extra>'
+)
+
+fig4.update_layout(
+    margin=dict(t=30, b=30, l=10, r=10),
+    legend_title_text='장르'
+)
 
 st.plotly_chart(fig4, use_container_width=True)
 
-st.info("💡 **이 그래프로 알 수 있는 것:** 초기 배급력(개봉일 스크린 수)이 흥행 성공(총 관객 수)과 강력한 양의 상관관계를 가짐을 확인할 수 있습니다.")
+st.info("💡 **이 그래프로 알 수 있는 것:** 개봉일 스크린 수가 많은 영화일수록 총 관객 수가 높아지는 대체적인 양의 관계를 보이며, 장르별 선호도 및 흥행 분포의 차이를 점의 색상을 통해 확인할 수 있습니다.")
 
 st.divider()
 
 # ==========================================
-# 그래프 5: 10위권 유지 일수 vs 총 관객수 (관계 분석)
+# 그래프 5: 10위권 유지 일수 vs 총 관객수
 # ==========================================
 st.subheader("5. 10위권 유지 일수(상위권 유지 기간)와 총 관객 수의 관계")
 
@@ -171,7 +176,6 @@ fig5 = px.scatter(
     size='first_week_audi',
     color='genre_clean',
     hover_name='movieNm',
-    hover_data={'days_in_top10': True, 'total_audi': ':,', 'first_week_audi': ':,'},
     labels={
         'days_in_top10': '10위권에 머문 날수 (일)',
         'total_audi': '총 관객 수 (명)',
