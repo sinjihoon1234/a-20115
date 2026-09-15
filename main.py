@@ -36,11 +36,9 @@ st.divider()
 # ==========================================
 st.subheader("1. 장르별 영화 편수 분포")
 
-# 장르별 편수 집계
 genre_counts = df['genre_clean'].value_counts().reset_index()
 genre_counts.columns = ['장르', '편수']
 
-# 도넛 그래프 생성
 fig1 = px.pie(
     genre_counts,
     names='장르',
@@ -49,7 +47,6 @@ fig1 = px.pie(
     color_discrete_sequence=px.colors.qualitative.Pastel
 )
 
-# 마우스 오버 시 편수와 비율이 보이도록 툴팁 설정
 fig1.update_traces(
     textposition='inside',
     textinfo='label+percent',
@@ -63,17 +60,15 @@ fig1.update_layout(
 
 st.plotly_chart(fig1, use_container_width=True)
 
-# 그래프 설명 구역
 st.info("💡 **이 그래프로 알 수 있는 것:** 1년간 상위권 박스오피스에 진입한 영화 중 드라마와 액션, 코미디 등 특정 장르가 차지하는 비중과 편수 분포를 직관적으로 파악할 수 있습니다.")
 
 st.divider()
 
 # ==========================================
-# 그래프 2: 장르별 영화 관객 수 트리맵 (신규 추가)
+# 그래프 2: 장르별 영화 관객 수 트리맵
 # ==========================================
 st.subheader("2. 장르별 영화 관객 수 분포 (트리맵)")
 
-# 트리맵 생성 (장르 -> 영화명 계층 구조, 칸 크기는 총 관객 수)
 fig2 = px.treemap(
     df,
     path=[px.Constant("전체 영화"), 'genre_clean', 'movieNm'],
@@ -82,7 +77,6 @@ fig2 = px.treemap(
     color_discrete_sequence=px.colors.qualitative.Set3
 )
 
-# 마우스 호버 툴팁 설정
 fig2.update_traces(
     hovertemplate='<b>%{label}</b><br>총 관객 수: %{value:,.0f}명<extra></extra>'
 )
@@ -93,17 +87,56 @@ fig2.update_layout(
 
 st.plotly_chart(fig2, use_container_width=True)
 
-# 그래프 설명 구역
 st.info("💡 **이 그래프로 알 수 있는 것:** 각 장르가 전체 관객 수에서 차지하는 비중과 장르 내에서 어떤 영화가 흥행을 주도했는지 한눈에 비교할 수 있습니다.")
 
 st.divider()
 
 # ==========================================
-# 그래프 3: 개봉일 스크린수 vs 총 관객수 (관계 분석)
+# 그래프 3: 총 관객 수 히스토그램 (신규 추가)
 # ==========================================
-st.subheader("3. 개봉일 스크린 수와 총 관객 수의 관계")
+st.subheader("3. 총 관객 수 분포 (히스토그램)")
 
-fig3 = px.scatter(
+fig3 = px.histogram(
+    df,
+    x='total_audi',
+    nbins=30,
+    labels={'total_audi': '총 관객 수 (명)', 'count': '영화 수'},
+    color_discrete_sequence=['#4C78A8']
+)
+
+fig3.update_traces(
+    hovertemplate='<b>관객 수 구간: %{x:,.0f}명</b><br>영화 수: %{y}편<extra></extra>'
+)
+
+fig3.update_layout(
+    yaxis_title="영화 수 (편)",
+    margin=dict(t=30, b=30, l=10, r=10)
+)
+
+st.plotly_chart(fig3, use_container_width=True)
+
+# 가장 관객 수가 많은 영화 추출
+max_movie = df.loc[df['total_audi'].idxmax()]
+max_movie_name = max_movie['movieNm']
+max_movie_audi = max_movie['total_audi']
+
+# 대부분의 영화가 몰려있는 구간 계산 (중위수 및 하위 75% 기준)
+q25 = df['total_audi'].quantile(0.25)
+q75 = df['total_audi'].quantile(0.75)
+
+st.info(
+    f"💡 **이 그래프로 알 수 있는 것:** 대부분의 영화는 관객 수 **{q25:,.0f}명 ~ {q75:,.0f}명** (약 300만 명 이하) 구간에 높게 몰려 있는 오른쪽 꼬리가 긴 분포를 보입니다. "
+    f"가장 관객 수가 많은 영화는 **'{max_movie_name}'**(총 **{max_movie_audi:,.0f}명**)입니다."
+)
+
+st.divider()
+
+# ==========================================
+# 그래프 4: 개봉일 스크린수 vs 총 관객수 (관계 분석)
+# ==========================================
+st.subheader("4. 개봉일 스크린 수와 총 관객 수의 관계")
+
+fig4 = px.scatter(
     df,
     x='first_scrn',
     y='total_audi',
@@ -117,22 +150,21 @@ fig3 = px.scatter(
     }
 )
 
-fig3.update_traces(marker=dict(size=10, opacity=0.7))
-fig3.update_layout(margin=dict(t=30, b=30, l=10, r=10))
+fig4.update_traces(marker=dict(size=10, opacity=0.7))
+fig4.update_layout(margin=dict(t=30, b=30, l=10, r=10))
 
-st.plotly_chart(fig3, use_container_width=True)
+st.plotly_chart(fig4, use_container_width=True)
 
-# 그래프 설명 구역
 st.info("💡 **이 그래프로 알 수 있는 것:** 초기 배급력(개봉일 스크린 수)이 흥행 성공(총 관객 수)과 강력한 양의 상관관계를 가짐을 확인할 수 있습니다.")
 
 st.divider()
 
 # ==========================================
-# 그래프 4: 10위권 유지 일수 vs 총 관객수 (관계 분석)
+# 그래프 5: 10위권 유지 일수 vs 총 관객수 (관계 분석)
 # ==========================================
-st.subheader("4. 10위권 유지 일수(상위권 유지 기간)와 총 관객 수의 관계")
+st.subheader("5. 10위권 유지 일수(상위권 유지 기간)와 총 관객 수의 관계")
 
-fig4 = px.scatter(
+fig5 = px.scatter(
     df,
     x='days_in_top10',
     y='total_audi',
@@ -148,9 +180,8 @@ fig4 = px.scatter(
     }
 )
 
-fig4.update_layout(margin=dict(t=30, b=30, l=10, r=10))
+fig5.update_layout(margin=dict(t=30, b=30, l=10, r=10))
 
-st.plotly_chart(fig4, use_container_width=True)
+st.plotly_chart(fig5, use_container_width=True)
 
-# 그래프 설명 구역
 st.info("💡 **이 그래프로 알 수 있는 것:** 박스오피스 상위권(10위권)에 오랫동안 잔류한 영화일수록 누적 관객 수가 극대화되는 롱런 흥행 양상을 파악할 수 있습니다.")
