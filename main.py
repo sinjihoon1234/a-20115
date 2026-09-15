@@ -1,227 +1,126 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 
-# 앱 웹페이지 제목 및 레이아웃 설정
-st.set_page_config(page_title="영화 박스오피스 분석", layout="wide")
-
-st.title("🎬 영화 박스오피스 데이터 분석 앱")
-
-# [1. 데이터 불러오기 및 캐싱]
-@st.cache_data
-def load_data():
-    url = "https://raw.githubusercontent.com/keep-growing-park/data-science/refs/heads/main/dataset/kobis_1year_boxoffice.csv"
-    data = pd.read_csv(url)
-    
-    # [2. 날짜 및 데이터 전처리]
-    data = data.dropna()
-    data['기준일자'] = pd.to_datetime(data['기준일자'])
-    data = data.sort_values('기준일자')
-    
-    return data
-
-# 전처리 완료된 데이터 로드
-df = load_data()
-
-# [3. 영화 선택 기능]
-sorted_movies = (
-    df.groupby('영화명')['누적관객수']
-    .max()
-    .sort_values(ascending=False)
-    .index
-    .tolist()
+# 페이지 설정
+st.set_page_config(
+    page_title="영화 데이터 그래프 - 분포와 관계",
+    page_icon="🎬",
+    layout="wide"
 )
 
-# 사이드바 선택 메뉴
-st.sidebar.header("🔍 개별 영화 조건 선택")
-selected_movie = st.sidebar.selectbox("분석할 영화를 선택해 주세요:", sorted_movies)
+# 타이틀
+st.title("🎬 영화 데이터 그래프 - 분포와 관계")
+st.caption("1년간 박스오피스 Top 10에 든 개봉 영화 216편의 데이터 시각화")
 
-# 선택한 영화 데이터 필터링
-filtered_df = df[df['영화명'] == selected_movie]
+# 1. 데이터 불러오기 및 전처리
+DATA_URL = "https://raw.githubusercontent.com/greatsong/modudata/main/data/kobis_movies.csv"
 
-# [5. 레이아웃 구역 나누기]
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-    "📊 개별 영화 일별 관객수", 
-    "📈 개별 영화 누적 관객수", 
-    "🏆 Top 5 영화 누적 관객수 비교",
-    "📉 전체 시장 관객수 추이 (7일 이동평균)",
-    "🗓️ 월별 전체 관객수 합계",
-    "📅 캘린더 히트맵 (주차별×요일별)"
-])
+@st.cache_data
+def load_data():
+    df = pd.read_csv(DATA_URL)
+    # 장르 전처리: 세로막대(|)로 구분된 경우 첫 번째 장르만 사용
+    df['genre_clean'] = df['genre'].astype(str).apply(lambda x: x.split('|')[0] if pd.notna(x) else x)
+    return df
 
-# 첫 번째 탭: 개별 영화 일별 관객수
-with tab1:
-    st.subheader(f"📊 [{selected_movie}] 일별 관객수 변화")
-    
-    fig1 = px.line(
-        filtered_df,
-        x='기준일자',
-        y='해당일관객수',
-        title=f"'{selected_movie}' 기준일자별 일별 관객수 변화",
-        labels={'기준일자': '날짜', '해당일관객수': '관객수(명)'},
-        markers=True
-    )
-    
-    st.plotly_chart(fig1, use_container_width=True)
-    st.info("💡 **이 그래프로 알 수 있는 것:** 해당 영화의 상영 기간 동안 개봉일 직후 관객수 집중도와 요일별/주차별 관객수 변화 추이를 한눈에 파악할 수 있습니다.")
+df = load_data()
 
-# 두 번째 탭: 개별 영화 누적 관객수
-with tab2:
-    st.subheader(f"📈 [{selected_movie}] 누적 관객수 변화")
-    
-    fig2 = px.area(
-        filtered_df,
-        x='기준일자',
-        y='누적관객수',
-        title=f"'{selected_movie}' 기준일자별 누적 관객수 변화",
-        labels={'기준일자': '날짜', '누적관객수': '누적 관객수(명)'}
-    )
-    
-    st.plotly_chart(fig2, use_container_width=True)
-    st.info("💡 **이 그래프로 알 수 있는 것:** 영화 상영 기간에 따른 누적 관객수의 지속적인 증가 기울기 및 주요 흥행 진폭이 둔화되는 시점을 쉽게 파악할 수 있습니다.")
+# 데이터 미리보기 (선택사항)
+with st.expander("📊 원본 데이터 확인하기"):
+    st.dataframe(df, use_container_width=True)
 
-# 세 번째 탭: 조건을 만족하는 Top 5 영화 누적 관객수 비교
-with tab3:
-    st.subheader("🏆 장기 흥행(20일 이상) Top 5 영화 누적 관객수 추이 비교")
-    
-    movie_counts = df['영화명'].value_counts()
-    movies_over_20days = movie_counts[movie_counts >= 20].index
-    
-    top5_movies = (
-        df[df['영화명'].isin(movies_over_20days)]
-        .groupby('영화명')['누적관객수']
-        .max()
-        .sort_values(ascending=False)
-        .head(5)
-        .index
-        .tolist()
-    )
-    
-    top5_df = df[df['영화명'].isin(top5_movies)]
-    
-    fig3 = px.line(
-        top5_df,
-        x='기준일자',
-        y='누적관객수',
-        color='영화명',
-        title="20일 이상 상위 차트에 유지된 Top 5 영화의 누적 관객수 추이",
-        labels={'기준일자': '날짜', '누적관객수': '누적 관객수(명)', '영화명': '영화 제목'}
-    )
-    
-    st.plotly_chart(fig3, use_container_width=True)
-    st.info("💡 **이 그래프로 알 수 있는 것:** 반짝 흥행에 그치지 않고 최소 20일 이상 박스오피스 상위권을 유지한 대표 장기 흥행작들의 누적 관객수 모객 속도와 최종 흥행 스케일을 비교할 수 있습니다.")
+st.divider()
 
-# 네 번째 탭: 전체 영화 시장 관객수 합계 및 7일 이동평균
-with tab4:
-    st.subheader("📉 전체 박스오피스 관객수 추이 및 7일 이동평균")
-    
-    daily_total = df.groupby('기준일자')['해당일관객수'].sum().reset_index()
-    daily_total['7일이동평균'] = daily_total['해당일관객수'].rolling(window=7).mean()
-    
-    fig4 = go.Figure()
-    
-    fig4.add_trace(go.Scatter(
-        x=daily_total['기준일자'],
-        y=daily_total['해당일관객수'],
-        mode='lines',
-        name='일별 총 관객수',
-        line=dict(color='lightgray', width=1.5)
-    ))
-    
-    fig4.add_trace(go.Scatter(
-        x=daily_total['기준일자'],
-        y=daily_total['7일이동평균'],
-        mode='lines',
-        name='7일 이동평균',
-        line=dict(color='#1f77b4', width=3)
-    ))
-    
-    fig4.update_layout(
-        title="전체 영화 기준일자별 관객수 합계 및 7일 이동평균 추이",
-        xaxis_title="날짜",
-        yaxis_title="총 관객수(명)",
-        hovermode="x unified"
-    )
-    
-    st.plotly_chart(fig4, use_container_width=True)
-    st.info("💡 **이 그래프로 알 수 있는 것:** 주말과 평일 간의 극심한 일별 관객수 변동(노이즈)을 평탄화하여, 전체 극장가 박스오피스 시장의 성수기/비수기 등 장기적인 관객 유입 흐름을 명확하게 파악할 수 있습니다.")
+# ==========================================
+# 그래프 1: 장르별 영화 편수 (플롯리 도넛 그래프)
+# ==========================================
+st.subheader("1. 장르별 영화 편수 분포")
 
-# 다섯 번째 탭: 월별 전체 관객수 합계 (막대 그래프)
-with tab5:
-    st.subheader("🗓️ 월별 전체 박스오피스 관객수 합계")
-    
-    daily_total_data = df.groupby('기준일자')['해당일관객수'].sum().reset_index()
-    daily_total_data['연월'] = daily_total_data['기준일자'].dt.strftime('%Y-%m')
-    monthly_total = daily_total_data.groupby('연월')['해당일관객수'].sum().reset_index()
-    
-    fig5 = px.bar(
-        monthly_total,
-        x='연월',
-        y='해당일관객수',
-        title="월별 박스오피스 전체 관객수 총합",
-        labels={'연월': '월(년-월)', '해당일관객수': '총 관객수(명)'},
-        text_auto='.2s'
-    )
-    
-    st.plotly_chart(fig5, use_container_width=True)
-    st.info("💡 **이 그래프로 알 수 있는 것:** 월별 총 관객수 비교를 통해 연중 극장가의 최대 성수기(방학/연휴 시즌)와 비수기 달이 언제인지 직관적으로 파악할 수 있습니다.")
+# 장르별 편수 집계
+genre_counts = df['genre_clean'].value_counts().reset_index()
+genre_counts.columns = ['장르', '편수']
 
-# 여섯 번째 탭: 주차별×요일별 캘린더 히트맵 (1일 1타일 빽빽한 구성)
-with tab6:
-    st.subheader("📅 주차별×요일별 캘린더 히트맵")
-    
-    # 1. 일별 전체 관객수 집계
-    daily_market = df.groupby('기준일자')['해당일관객수'].sum().reset_index()
-    
-    # 2. 날짜 속성 추출 (요일, 날짜 문자열)
-    day_map = {0: '월', 1: '화', 2: '수', 3: '목', 4: '금', 5: '토', 6: '일'}
-    daily_market['요일'] = daily_market['기준일자'].dt.dayofweek.map(day_map)
-    day_order = ['월', '화', '수', '목', '금', '토', '일']
-    
-    # 마우스 올려놓았을 때 보여줄 YYYY-MM-DD 포맷
-    daily_market['날짜str'] = daily_market['기준일자'].dt.strftime('%Y-%m-%d')
-    
-    # 주차(Week) 식별자 생성 (주 시작일인 월요일 기준으로 연-월 주차 표시)
-    week_start = daily_market['기준일자'] - pd.to_timedelta(daily_market['기준일자'].dt.dayofweek, unit='D')
-    daily_market['주차_레이블'] = week_start.dt.strftime('%Y-%m (%W주차)')
-    
-    # 3. 주차×요일 2차원 피벗 테이블 생성 (X축: 주차 52개, Y축: 요일 7개 = 364개 타일)
-    pivot_audience = daily_market.pivot_table(
-        index='요일',
-        columns='주차_레이블',
-        values='해당일관객수',
-        aggfunc='first',
-        observed=False
-    ).reindex(day_order)
-    
-    pivot_dates = daily_market.pivot_table(
-        index='요일',
-        columns='주차_레이블',
-        values='날짜str',
-        aggfunc='first',
-        observed=False
-    ).reindex(day_order)
-    
-    # 4. Plotly 캘린더 히트맵 구현
-    fig6 = go.Figure(
-        data=go.Heatmap(
-            z=pivot_audience.values,
-            x=pivot_audience.columns,
-            y=pivot_audience.index,
-            text=pivot_dates.values,
-            colorscale='YlGnBu',  # 관객수가 많을수록 진한 색상
-            hovertemplate='<b>날짜:</b> %{text}<br><b>총 관객수:</b> %{z:,.0f}명<extra></extra>'
-        )
-    )
-    
-    fig6.update_layout(
-        title="일별 관객수 캘린더 히트맵 (주차별 × 요일별)",
-        xaxis_title="주차 (연-월 주차)",
-        yaxis_title="요일",
-        yaxis=dict(autorange='reversed'),  # 월요일을 가장 위에 배치
-        template='plotly_white'
-    )
-    
-    st.plotly_chart(fig6, use_container_width=True)
-    st.info("💡 **이 그래프로 알 수 있는 것:** 1년 365일의 관객수를 1일 단위 캘린더 타일로 펼쳐봄으로써, 명절·연휴·주말 등 관객수가 폭발하는 개별 일자(YYYY-MM-DD)를 정밀하게 포착할 수 있습니다.")
+# 도넛 그래프 생성
+fig1 = px.pie(
+    genre_counts,
+    names='장르',
+    values='편수',
+    hole=0.4,
+    color_discrete_sequence=px.colors.qualitative.Pastel
+)
+
+# 마우스 오버 시 편수와 비율이 보이도록 툴팁 설정
+fig1.update_traces(
+    textposition='inside',
+    textinfo='label+percent',
+    hovertemplate='<b>장르: %{label}</b><br>편수: %{value}편<br>비율: %{percent}<extra></extra>'
+)
+
+fig1.update_layout(
+    margin=dict(t=30, b=30, l=10, r=10),
+    legend_title_text='장르 목록'
+)
+
+st.plotly_chart(fig1, use_container_width=True)
+
+# 그래프 설명 구역
+st.info("💡 **이 그래프로 알 수 있는 것:** 1년간 상위권 박스오피스에 진입한 영화 중 드라마와 액션, 코미디 등 특정 장르가 차지하는 비중과 편수 분포를 직관적으로 파악할 수 있습니다.")
+
+st.divider()
+
+# ==========================================
+# 그래프 2: 개봉일 스크린수 vs 총 관객수 (관계 분석)
+# ==========================================
+st.subheader("2. 개봉일 스크린 수와 총 관객 수의 관계")
+
+fig2 = px.scatter(
+    df,
+    x='first_scrn',
+    y='total_audi',
+    color='genre_clean',
+    hover_name='movieNm',
+    hover_data={'first_scrn': ':,', 'total_audi': ':,', 'days_in_top10': True},
+    labels={
+        'first_scrn': '개봉일 스크린 수 (개)',
+        'total_audi': '총 관객 수 (명)',
+        'genre_clean': '장르'
+    }
+)
+
+fig2.update_traces(marker=dict(size=10, opacity=0.7))
+fig2.update_layout(margin=dict(t=30, b=30, l=10, r=10))
+
+st.plotly_chart(fig2, use_container_width=True)
+
+# 그래프 설명 구역
+st.info("💡 **이 그래프로 알 수 있는 것:** 초기 배급력(개봉일 스크린 수)이 흥행 성공(총 관객 수)과 강력한 양의 상관관계를 가짐을 확인할 수 있습니다.")
+
+st.divider()
+
+# ==========================================
+# 그래프 3: 10위권 유지 일수 vs 총 관객수 (관계 분석)
+# ==========================================
+st.subheader("3. 10위권 유지 일수(상위권 유지 기간)와 총 관객 수의 관계")
+
+fig3 = px.scatter(
+    df,
+    x='days_in_top10',
+    y='total_audi',
+    size='first_week_audi',
+    color='genre_clean',
+    hover_name='movieNm',
+    hover_data={'days_in_top10': True, 'total_audi': ':,', 'first_week_audi': ':,'},
+    labels={
+        'days_in_top10': '10위권에 머문 날수 (일)',
+        'total_audi': '총 관객 수 (명)',
+        'first_week_audi': '개봉 첫 주 관객 수',
+        'genre_clean': '장르'
+    }
+)
+
+fig3.update_layout(margin=dict(t=30, b=30, l=10, r=10))
+
+st.plotly_chart(fig3, use_container_width=True)
+
+# 그래프 설명 구역
+st.info("💡 **이 그래프로 알 수 있는 것:** 박스오피스 상위권(10위권)에 오랫동안 잔류한 영화일수록 누적 관객 수가 극대화되는 롱런 흥행 양상을 파악할 수 있습니다.")
