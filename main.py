@@ -139,7 +139,7 @@ fig4 = px.scatter(
     x='first_scrn',
     y='total_audi',
     color='genre_clean',
-    hover_name='movieNm',  # 마우스 올렸을 때 제목에 영화명 표시
+    hover_name='movieNm',
     labels={
         'first_scrn': '개봉일 스크린 수 (개)',
         'total_audi': '총 관객 수 (명)',
@@ -147,7 +147,6 @@ fig4 = px.scatter(
     }
 )
 
-# 점 크기 및 툴팁 서식 지정 (영화명, 개봉일 스크린수, 총 관객수)
 fig4.update_traces(
     marker=dict(size=9, opacity=0.8),
     hovertemplate='<b>%{hovertext}</b><br>개봉일 스크린 수: %{x:,.0f}개<br>총 관객 수: %{y:,.0f}명<extra></extra>'
@@ -165,11 +164,49 @@ st.info("💡 **이 그래프로 알 수 있는 것:** 개봉일 스크린 수�
 st.divider()
 
 # ==========================================
-# 그래프 5: 10위권 유지 일수 vs 총 관객수
+# 그래프 5: 주요 장르별 총 관객 수 박스플롯 (신규 추가)
 # ==========================================
-st.subheader("5. 10위권 유지 일수(상위권 유지 기간)와 총 관객 수의 관계")
+st.subheader("5. 주요 장르별(10편 이상) 총 관객 수 분포 (박스플롯)")
 
-fig5 = px.scatter(
+# 영화가 10편 이상인 장르 필터링
+genre_counts_series = df['genre_clean'].value_counts()
+target_genres = genre_counts_series[genre_counts_series >= 10].index
+df_filtered = df[df['genre_clean'].isin(target_genres)]
+
+fig5 = px.box(
+    df_filtered,
+    x='genre_clean',
+    y='total_audi',
+    color='genre_clean',
+    points='outliers',  # 이상치(상자 밖 점) 표시
+    hover_name='movieNm',  # 이상치 및 데이터 포인트에 마우스 올리면 영화명 표시
+    labels={
+        'genre_clean': '장르',
+        'total_audi': '총 관객 수 (명)'
+    }
+)
+
+fig5.update_traces(
+    hovertemplate='<b>%{hovertext}</b><br>총 관객 수: %{y:,.0f}명<extra></extra>'
+)
+
+fig5.update_layout(
+    showlegend=False,
+    margin=dict(t=30, b=30, l=10, r=10)
+)
+
+st.plotly_chart(fig5, use_container_width=True)
+
+st.info("💡 **이 그래프로 알 수 있는 것:** 주요 장르 간 중앙값과 관객 수 편차를 비교할 수 있으며, 박스 상단 밖으로 길게 튀어나온 이상치 점들을 통해 장르 내 초대형 대박 흥행작(outlier)을 명확히 식별할 수 있습니다.")
+
+st.divider()
+
+# ==========================================
+# 그래프 6: 10위권 유지 일수 vs 총 관객수
+# ==========================================
+st.subheader("6. 10위권 유지 일수(상위권 유지 기간)와 총 관객 수의 관계")
+
+fig6 = px.scatter(
     df,
     x='days_in_top10',
     y='total_audi',
@@ -184,8 +221,8 @@ fig5 = px.scatter(
     }
 )
 
-fig5.update_layout(margin=dict(t=30, b=30, l=10, r=10))
+fig6.update_layout(margin=dict(t=30, b=30, l=10, r=10))
 
-st.plotly_chart(fig5, use_container_width=True)
+st.plotly_chart(fig6, use_container_width=True)
 
 st.info("💡 **이 그래프로 알 수 있는 것:** 박스오피스 상위권(10위권)에 오랫동안 잔류한 영화일수록 누적 관객 수가 극대화되는 롱런 흥행 양상을 파악할 수 있습니다.")
