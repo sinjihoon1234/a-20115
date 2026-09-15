@@ -69,11 +69,41 @@ st.info("💡 **이 그래프로 알 수 있는 것:** 1년간 상위권 박스�
 st.divider()
 
 # ==========================================
-# 그래프 2: 개봉일 스크린수 vs 총 관객수 (관계 분석)
+# 그래프 2: 장르별 영화 관객 수 트리맵 (신규 추가)
 # ==========================================
-st.subheader("2. 개봉일 스크린 수와 총 관객 수의 관계")
+st.subheader("2. 장르별 영화 관객 수 분포 (트리맵)")
 
-fig2 = px.scatter(
+# 트리맵 생성 (장르 -> 영화명 계층 구조, 칸 크기는 총 관객 수)
+fig2 = px.treemap(
+    df,
+    path=[px.Constant("전체 영화"), 'genre_clean', 'movieNm'],
+    values='total_audi',
+    color='genre_clean',
+    color_discrete_sequence=px.colors.qualitative.Set3
+)
+
+# 마우스 호버 툴팁 설정
+fig2.update_traces(
+    hovertemplate='<b>%{label}</b><br>총 관객 수: %{value:,.0f}명<extra></extra>'
+)
+
+fig2.update_layout(
+    margin=dict(t=30, b=30, l=10, r=10)
+)
+
+st.plotly_chart(fig2, use_container_width=True)
+
+# 그래프 설명 구역
+st.info("💡 **이 그래프로 알 수 있는 것:** 각 장르가 전체 관객 수에서 차지하는 비중과 장르 내에서 어떤 영화가 흥행을 주도했는지 한눈에 비교할 수 있습니다.")
+
+st.divider()
+
+# ==========================================
+# 그래프 3: 개봉일 스크린수 vs 총 관객수 (관계 분석)
+# ==========================================
+st.subheader("3. 개봉일 스크린 수와 총 관객 수의 관계")
+
+fig3 = px.scatter(
     df,
     x='first_scrn',
     y='total_audi',
@@ -87,10 +117,10 @@ fig2 = px.scatter(
     }
 )
 
-fig2.update_traces(marker=dict(size=10, opacity=0.7))
-fig2.update_layout(margin=dict(t=30, b=30, l=10, r=10))
+fig3.update_traces(marker=dict(size=10, opacity=0.7))
+fig3.update_layout(margin=dict(t=30, b=30, l=10, r=10))
 
-st.plotly_chart(fig2, use_container_width=True)
+st.plotly_chart(fig3, use_container_width=True)
 
 # 그래프 설명 구역
 st.info("💡 **이 그래프로 알 수 있는 것:** 초기 배급력(개봉일 스크린 수)이 흥행 성공(총 관객 수)과 강력한 양의 상관관계를 가짐을 확인할 수 있습니다.")
@@ -98,11 +128,11 @@ st.info("💡 **이 그래프로 알 수 있는 것:** 초기 배급력(개봉�
 st.divider()
 
 # ==========================================
-# 그래프 3: 10위권 유지 일수 vs 총 관객수 (관계 분석)
+# 그래프 4: 10위권 유지 일수 vs 총 관객수 (관계 분석)
 # ==========================================
-st.subheader("3. 10위권 유지 일수(상위권 유지 기간)와 총 관객 수의 관계")
+st.subheader("4. 10위권 유지 일수(상위권 유지 기간)와 총 관객 수의 관계")
 
-fig3 = px.scatter(
+fig4 = px.scatter(
     df,
     x='days_in_top10',
     y='total_audi',
@@ -118,9 +148,9 @@ fig3 = px.scatter(
     }
 )
 
-fig3.update_layout(margin=dict(t=30, b=30, l=10, r=10))
+fig4.update_layout(margin=dict(t=30, b=30, l=10, r=10))
 
-st.plotly_chart(fig3, use_container_width=True)
+st.plotly_chart(fig4, use_container_width=True)
 
 # 그래프 설명 구역
 st.info("💡 **이 그래프로 알 수 있는 것:** 박스오피스 상위권(10위권)에 오랫동안 잔류한 영화일수록 누적 관객 수가 극대화되는 롱런 흥행 양상을 파악할 수 있습니다.")
