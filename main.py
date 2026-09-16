@@ -201,7 +201,7 @@ st.info("💡 **이 그래프로 알 수 있는 것:** 주요 장르 간 중앙�
 st.divider()
 
 # ==========================================
-# 그래프 6: 개봉일 스크린수 vs 총 관객수 버블 차트 (신규 추가)
+# 그래프 6: 개봉일 스크린수 vs 총 관객수 버블 차트
 # ==========================================
 st.subheader("6. 개봉일 스크린 수, 총 관객 수, 개봉 첫 주 관객 수의 관계 (버블 차트)")
 
@@ -209,11 +209,11 @@ fig6 = px.scatter(
     df,
     x='first_scrn',
     y='total_audi',
-    size='first_week_audi',  # 버블 크기: 개봉 첫 주 관객 수
+    size='first_week_audi',
     color='genre_clean',
     hover_name='movieNm',
     hover_data={'first_week_audi': ':,'},
-    size_max=40,  # 버블 최대 크기 설정
+    size_max=40,
     labels={
         'first_scrn': '개봉일 스크린 수 (개)',
         'total_audi': '총 관객 수 (명)',
@@ -238,11 +238,39 @@ st.info("💡 **이 그래프로 알 수 있는 것:** 개봉일 스크린 수(X
 st.divider()
 
 # ==========================================
-# 그래프 7: 10위권 유지 일수 vs 총 관객수
+# 그래프 7: 제작 국가 -> 장르 선버스트 차트 (신규 추가)
 # ==========================================
-st.subheader("7. 10위권 유지 일수(상위권 유지 기간)와 총 관객 수의 관계")
+st.subheader("7. 제작 국가별 주요 장르 구성 (선버스트)")
 
-fig7 = px.scatter(
+# 제작 국가(nation) -> 장르(genre_clean) 계층 구조 생성
+fig7 = px.sunburst(
+    df,
+    path=['nation', 'genre_clean'],
+    color='nation',
+    color_discrete_sequence=px.colors.qualitative.Pastel1
+)
+
+# 칸의 크기(편수) 및 비율 안내 툴팁 설정
+fig7.update_traces(
+    hovertemplate='<b>%{label}</b><br>영화 편수: %{value}편<br>비율: %{percentParent:.1%}<extra></extra>'
+)
+
+fig7.update_layout(
+    margin=dict(t=30, b=30, l=10, r=10)
+)
+
+st.plotly_chart(fig7, use_container_width=True)
+
+st.info("💡 **이 그래프로 알 수 있는 것:** 제작 국가별 박스오피스 진출 영화 편수의 비중과, 각 국가 내에서 어떤 장르의 영화가 주를 이루고 있는지 계층 구조로 파악할 수 있습니다.")
+
+st.divider()
+
+# ==========================================
+# 그래프 8: 10위권 유지 일수 vs 총 관객수
+# ==========================================
+st.subheader("8. 10위권 유지 일수(상위권 유지 기간)와 총 관객 수의 관계")
+
+fig8 = px.scatter(
     df,
     x='days_in_top10',
     y='total_audi',
@@ -257,8 +285,8 @@ fig7 = px.scatter(
     }
 )
 
-fig7.update_layout(margin=dict(t=30, b=30, l=10, r=10))
+fig8.update_layout(margin=dict(t=30, b=30, l=10, r=10))
 
-st.plotly_chart(fig7, use_container_width=True)
+st.plotly_chart(fig8, use_container_width=True)
 
 st.info("💡 **이 그래프로 알 수 있는 것:** 박스오피스 상위권(10위권)에 오랫동안 잔류한 영화일수록 누적 관객 수가 극대화되는 롱런 흥행 양상을 파악할 수 있습니다.")
