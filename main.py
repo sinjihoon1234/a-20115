@@ -164,11 +164,10 @@ st.info("💡 **이 그래프로 알 수 있는 것:** 개봉일 스크린 수�
 st.divider()
 
 # ==========================================
-# 그래프 5: 주요 장르별 총 관객 수 박스플롯 (신규 추가)
+# 그래프 5: 주요 장르별 총 관객 수 박스플롯
 # ==========================================
 st.subheader("5. 주요 장르별(10편 이상) 총 관객 수 분포 (박스플롯)")
 
-# 영화가 10편 이상인 장르 필터링
 genre_counts_series = df['genre_clean'].value_counts()
 target_genres = genre_counts_series[genre_counts_series >= 10].index
 df_filtered = df[df['genre_clean'].isin(target_genres)]
@@ -178,8 +177,8 @@ fig5 = px.box(
     x='genre_clean',
     y='total_audi',
     color='genre_clean',
-    points='outliers',  # 이상치(상자 밖 점) 표시
-    hover_name='movieNm',  # 이상치 및 데이터 포인트에 마우스 올리면 영화명 표시
+    points='outliers',
+    hover_name='movieNm',
     labels={
         'genre_clean': '장르',
         'total_audi': '총 관객 수 (명)'
@@ -202,11 +201,48 @@ st.info("💡 **이 그래프로 알 수 있는 것:** 주요 장르 간 중앙�
 st.divider()
 
 # ==========================================
-# 그래프 6: 10위권 유지 일수 vs 총 관객수
+# 그래프 6: 개봉일 스크린수 vs 총 관객수 버블 차트 (신규 추가)
 # ==========================================
-st.subheader("6. 10위권 유지 일수(상위권 유지 기간)와 총 관객 수의 관계")
+st.subheader("6. 개봉일 스크린 수, 총 관객 수, 개봉 첫 주 관객 수의 관계 (버블 차트)")
 
 fig6 = px.scatter(
+    df,
+    x='first_scrn',
+    y='total_audi',
+    size='first_week_audi',  # 버블 크기: 개봉 첫 주 관객 수
+    color='genre_clean',
+    hover_name='movieNm',
+    hover_data={'first_week_audi': ':,'},
+    size_max=40,  # 버블 최대 크기 설정
+    labels={
+        'first_scrn': '개봉일 스크린 수 (개)',
+        'total_audi': '총 관객 수 (명)',
+        'first_week_audi': '개봉 첫 주 관객 수',
+        'genre_clean': '장르'
+    }
+)
+
+fig6.update_traces(
+    hovertemplate='<b>%{hovertext}</b><br>개봉일 스크린 수: %{x:,.0f}개<br>총 관객 수: %{y:,.0f}명<br>첫 주 관객 수: %{customdata[0]:,.0f}명<extra></extra>'
+)
+
+fig6.update_layout(
+    margin=dict(t=30, b=30, l=10, r=10),
+    legend_title_text='장르'
+)
+
+st.plotly_chart(fig6, use_container_width=True)
+
+st.info("💡 **이 그래프로 알 수 있는 것:** 개봉일 스크린 수(X축)와 총 관객 수(Y축)에 더해, 버블 크기를 통해 '개봉 첫 주 관객 수'의 영향력을 3차원적으로 비교할 수 있습니다. 초기 스크린 수 대비 첫 주 반응이 폭발적이었던 영화들을 한눈에 식별할 수 있습니다.")
+
+st.divider()
+
+# ==========================================
+# 그래프 7: 10위권 유지 일수 vs 총 관객수
+# ==========================================
+st.subheader("7. 10위권 유지 일수(상위권 유지 기간)와 총 관객 수의 관계")
+
+fig7 = px.scatter(
     df,
     x='days_in_top10',
     y='total_audi',
@@ -221,8 +257,8 @@ fig6 = px.scatter(
     }
 )
 
-fig6.update_layout(margin=dict(t=30, b=30, l=10, r=10))
+fig7.update_layout(margin=dict(t=30, b=30, l=10, r=10))
 
-st.plotly_chart(fig6, use_container_width=True)
+st.plotly_chart(fig7, use_container_width=True)
 
 st.info("💡 **이 그래프로 알 수 있는 것:** 박스오피스 상위권(10위권)에 오랫동안 잔류한 영화일수록 누적 관객 수가 극대화되는 롱런 흥행 양상을 파악할 수 있습니다.")
