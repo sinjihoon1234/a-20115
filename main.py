@@ -23,6 +23,40 @@ def load_data():
     df['genre_clean'] = df['genre'].astype(str).apply(lambda x: x.split('|')[0] if pd.notna(x) else x)
     # 개봉일(openDt) 숫자를 datetime 형식으로 변환
     df['openDt_parsed'] = pd.to_datetime(df['openDt'].astype(str), format='%Y%m%d', errors='coerce')
+    
+    # 한국 극장가 주요 연휴 및 성수기 시즌 여부 구분 함수
+    # - 설 연휴/겨울 대목 (1월 말 ~ 2월 중순)
+    # - 가정의 달/어린이날 (5월)
+    # - 여름 극장가 최고 성수기 (7월 ~ 8월)
+    # - 추석 연휴 (9월 ~ 10월 초)
+    # - 연말 / 크리스마스 성수기 (12월)
+    def is_holiday_season(dt):
+        if pd.isna(dt):
+            return "평시 개봉"
+        month = dt.month
+        day = dt.day
+        
+        # 1월/2월 (설 연휴 시즌)
+        if month == 1 and day >= 15:
+            return "주요 연휴/성수기 개봉"
+        if month == 2 and day <= 20:
+            return "주요 연휴/성수기 개봉"
+        # 5월 (가정의 달)
+        if month == 5:
+            return "주요 연휴/성수기 개봉"
+        # 7~8월 (여름 대목)
+        if month in [7, 8]:
+            return "주요 연휴/성수기 개봉"
+        # 9월/10월 초 (추석 시즌)
+        if month == 9 or (month == 10 and day <= 10):
+            return "주요 연휴/성수기 개봉"
+        # 12월 (연말/크리스마스)
+        if month == 12:
+            return "주요 연휴/성수기 개봉"
+            
+        return "평시 개봉"
+
+    df['season_type'] = df['openDt_parsed'].apply(is_holiday_season)
     return df
 
 df = load_data()
@@ -266,26 +300,33 @@ st.info("💡 **이 그래프로 알 수 있는 것:** 제작 국가별 박스�
 st.divider()
 
 # ==========================================
-# 그래프 8: 개봉일과 총 관객수 사이의 상관관계 산점도 (신규 추가)
+# 그래프 8: 개봉일과 총 관객수 상관관계 산점도 (연휴/성수기 구분 색상)
 # ==========================================
 st.subheader("8. 개봉일과 총 관객수 사이에는 상관관계가 있을까?")
+
+# 주요 연휴/성수기 개봉작은 붉은색계열(#E63946), 평시 개봉작은 회색/푸른색계열(#A8DADC)로 통일
+color_map = {
+    "주요 연휴/성수기 개봉": "#E63946",
+    "평시 개봉": "#A8DADC"
+}
 
 fig8 = px.scatter(
     df,
     x='openDt_parsed',
     y='total_audi',
-    color='genre_clean',
+    color='season_type',
+    color_discrete_map=color_map,
     hover_name='movieNm',
     title="개봉일과 총 관객수 사이에는 상관관계가 있을까?",
     labels={
         'openDt_parsed': '개봉일',
         'total_audi': '총 관객 수 (명)',
-        'genre_clean': '장르'
+        'season_type': '개봉 시기 구분'
     }
 )
 
 fig8.update_traces(
-    marker=dict(size=9, opacity=0.8),
+    marker=dict(size=10, opacity=0.85),
     hovertemplate='<b>%{hovertext}</b><br>개봉일: %{x|%Y-%m-%d}<br>총 관객 수: %{y:,.0f}명<extra></extra>'
 )
 
@@ -293,12 +334,12 @@ fig8.update_layout(
     title_font_size=18,
     xaxis=dict(tickformat="%Y-%m-%d"),
     margin=dict(t=50, b=30, l=10, r=10),
-    legend_title_text='장르'
+    legend_title_text='개봉 시기'
 )
 
 st.plotly_chart(fig8, use_container_width=True)
 
-st.info("💡 **이 그래프로 알 수 있는 것:** 여름 성수기(7~8월)나 연말/설·추석 연휴 등 특정 대목 시즌에 개봉한 영화들의 총 관객 수가 밀집되거나 높은 봉우리를 형성하는 경향이 있는지 관찰할 수 있습니다.")
+st.info("💡 **이 그래프로 알 수 있는 것:** 붉은색으로 강조된 주요 연휴 및 성수기(설/추석 연휴, 5월, 7~8월 여름, 12월 연말) 개봉작들이 평시 개봉작(푸른색) 대비 상단(높은 총 관객 수)에 분포하는 경향이 뚜렷함을 비교할 수 있습니다.")
 
 st.divider()
 
