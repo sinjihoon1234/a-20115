@@ -21,6 +21,8 @@ def load_data():
     df = pd.read_csv(DATA_URL)
     # 장르 전처리: 세로막대(|)로 구분된 경우 첫 번째 장르만 사용
     df['genre_clean'] = df['genre'].astype(str).apply(lambda x: x.split('|')[0] if pd.notna(x) else x)
+    # 개봉일(openDt) 숫자를 datetime 형식으로 변환
+    df['openDt_parsed'] = pd.to_datetime(df['openDt'].astype(str), format='%Y%m%d', errors='coerce')
     return df
 
 df = load_data()
@@ -238,11 +240,10 @@ st.info("💡 **이 그래프로 알 수 있는 것:** 개봉일 스크린 수(X
 st.divider()
 
 # ==========================================
-# 그래프 7: 제작 국가 -> 장르 선버스트 차트 (신규 추가)
+# 그래프 7: 제작 국가 -> 장르 선버스트 차트
 # ==========================================
 st.subheader("7. 제작 국가별 주요 장르 구성 (선버스트)")
 
-# 제작 국가(nation) -> 장르(genre_clean) 계층 구조 생성
 fig7 = px.sunburst(
     df,
     path=['nation', 'genre_clean'],
@@ -250,7 +251,6 @@ fig7 = px.sunburst(
     color_discrete_sequence=px.colors.qualitative.Pastel1
 )
 
-# 칸의 크기(편수) 및 비율 안내 툴팁 설정
 fig7.update_traces(
     hovertemplate='<b>%{label}</b><br>영화 편수: %{value}편<br>비율: %{percentParent:.1%}<extra></extra>'
 )
@@ -266,11 +266,48 @@ st.info("💡 **이 그래프로 알 수 있는 것:** 제작 국가별 박스�
 st.divider()
 
 # ==========================================
-# 그래프 8: 10위권 유지 일수 vs 총 관객수
+# 그래프 8: 개봉일과 총 관객수 사이의 상관관계 산점도 (신규 추가)
 # ==========================================
-st.subheader("8. 10위권 유지 일수(상위권 유지 기간)와 총 관객 수의 관계")
+st.subheader("8. 개봉일과 총 관객수 사이에는 상관관계가 있을까?")
 
 fig8 = px.scatter(
+    df,
+    x='openDt_parsed',
+    y='total_audi',
+    color='genre_clean',
+    hover_name='movieNm',
+    title="개봉일과 총 관객수 사이에는 상관관계가 있을까?",
+    labels={
+        'openDt_parsed': '개봉일',
+        'total_audi': '총 관객 수 (명)',
+        'genre_clean': '장르'
+    }
+)
+
+fig8.update_traces(
+    marker=dict(size=9, opacity=0.8),
+    hovertemplate='<b>%{hovertext}</b><br>개봉일: %{x|%Y-%m-%d}<br>총 관객 수: %{y:,.0f}명<extra></extra>'
+)
+
+fig8.update_layout(
+    title_font_size=18,
+    xaxis=dict(tickformat="%Y-%m-%d"),
+    margin=dict(t=50, b=30, l=10, r=10),
+    legend_title_text='장르'
+)
+
+st.plotly_chart(fig8, use_container_width=True)
+
+st.info("💡 **이 그래프로 알 수 있는 것:** 여름 성수기(7~8월)나 연말/설·추석 연휴 등 특정 대목 시즌에 개봉한 영화들의 총 관객 수가 밀집되거나 높은 봉우리를 형성하는 경향이 있는지 관찰할 수 있습니다.")
+
+st.divider()
+
+# ==========================================
+# 그래프 9: 10위권 유지 일수 vs 총 관객수
+# ==========================================
+st.subheader("9. 10위권 유지 일수(상위권 유지 기간)와 총 관객 수의 관계")
+
+fig9 = px.scatter(
     df,
     x='days_in_top10',
     y='total_audi',
@@ -285,8 +322,8 @@ fig8 = px.scatter(
     }
 )
 
-fig8.update_layout(margin=dict(t=30, b=30, l=10, r=10))
+fig9.update_layout(margin=dict(t=30, b=30, l=10, r=10))
 
-st.plotly_chart(fig8, use_container_width=True)
+st.plotly_chart(fig9, use_container_width=True)
 
 st.info("💡 **이 그래프로 알 수 있는 것:** 박스오피스 상위권(10위권)에 오랫동안 잔류한 영화일수록 누적 관객 수가 극대화되는 롱런 흥행 양상을 파악할 수 있습니다.")
